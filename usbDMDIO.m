@@ -57,7 +57,12 @@ classdef usbDMDIO < DMDIO
             
             % make all hidapi relevant functions available to usbDMDIO.m
             libDir = strsplit(mfilename('fullpath'), filesep);
-            addpath(fullfile(libDir{1:end-1}, 'hidapi'));
+            % fix fullfile file separation for linux systems
+            firstsep = '';
+            if (isunix == 1)
+                firstsep = '/';
+            end
+            addpath(fullfile(firstsep, libDir{1:end-1}, 'hidapi'));
             
             if nargin == 0
                 dmdIO.debug = 0;

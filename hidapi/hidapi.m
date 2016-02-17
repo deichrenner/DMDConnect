@@ -80,7 +80,12 @@ classdef hidapi < handle
             
             % make all hidapi relevant library files known to the matlab path
             libDir = strsplit(mfilename('fullpath'), filesep);
-            addpath(fullfile(libDir{1:end-1}));
+            % fix fullfile file separation for linux systems
+            firstsep = '';
+            if (isunix == 1)
+                firstsep = '/';
+            end
+            addpath(fullfile(firstsep, libDir{1:end-1}));
             
             hid.debug = debug;
             if hid.debug > 0

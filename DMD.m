@@ -61,7 +61,12 @@ classdef DMD < handle
              
              % make all helper functions known to DMD()
              libDir = strsplit(mfilename('fullpath'), filesep);
-             addpath(fullfile(libDir{1:end-1}, 'helperFunctions'));
+             % fix fullfile file separation for linux systems
+             firstsep = '';
+             if (isunix == 1)
+                 firstsep = '/';
+             end
+             addpath(fullfile(firstsep, libDir{1:end-1}, 'helperFunctions'));
              
              % init the properties
              opt.debug = 0;
@@ -183,12 +188,12 @@ classdef DMD < handle
             %
             
             idx             = 0;    % pattern index
-            exposureTime    = 500000;  % exposure time in µs
+            exposureTime    = 500000;  % exposure time in ï¿½s
             clearAfter      = 1;    % clear pattern after exposure
             bitDepth        = 8;    % desired bit depth (1 corresponds to bitdepth of 1)
             leds            = 1;    % select which color to use
             triggerIn       = 0;    % wait for trigger or cuntinue
-            darkTime        = 500000;    % dark time after exposure in µs
+            darkTime        = 500000;    % dark time after exposure in ï¿½s
             triggerOut      = 0;    % use trigger2 as output
             patternIdx      = 0;    % image pattern index
             bitPosition     = 0;    % bit position in image pattern
