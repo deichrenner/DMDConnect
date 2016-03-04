@@ -141,6 +141,35 @@ classdef DMD < handle
             end
         end
         
+        function display(dmd,I)
+            %DMD.display supermethod to prepare, upload and show a matlab
+            %matrix
+            % 
+            % display prepares the matrix I for upload, uploads it and
+            % finally displays it on the dmd
+            %
+            % Note:
+            % - I is the input matrix (max size 1920x1080x1)
+            %
+            % Example::
+            %           d.display(ones(1920,1080))
+            
+            % prepare matrix for upload
+            BMP = prepBMP(I);
+            % set the mode to pattern display mode
+            dmd.setMode
+            % define the pattern to be uploaded 
+            dmd.definePattern % FIXME: allow for better pattern definition
+            % set the number of images to be uploaded to one
+            dmd.numOfImages
+            % initialize the pattern upload
+            dmd.initPatternLoad(0,size(BMP,1));
+            % do the upload
+            dmd.uploadPattern(BMP)
+            % set the dmd state to play
+            dmd.patternControl(2)
+        end
+        
         function setMode(dmd,m) % 0x1A1B
             %DMD.setMode Sets DMD to the selected mode
             % 
@@ -190,7 +219,7 @@ classdef DMD < handle
             idx             = 0;    % pattern index
             exposureTime    = 500000;  % exposure time in �s
             clearAfter      = 1;    % clear pattern after exposure
-            bitDepth        = 8;    % desired bit depth (1 corresponds to bitdepth of 1)
+            bitDepth        = 1;    % desired bit depth (1 corresponds to bitdepth of 1)
             leds            = 1;    % select which color to use
             triggerIn       = 0;    % wait for trigger or cuntinue
             darkTime        = 500000;    % dark time after exposure in �s
