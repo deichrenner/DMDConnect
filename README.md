@@ -1,6 +1,7 @@
 # DMDConnect
 This Matlab package provides a connection to the LightCrafter EVM6500 DLP evaluation platform. 
 The code is based on the usb communication library hidapi and its Matlab implementation realized by Peter Corke. 
+For a working progress bar you need to download the textprogressbar function from [FileExchange](http://www.mathworks.com/matlabcentral/fileexchange/28067-text-progress-bar). Copy the file to the helperFunctions folder. 
 
 The most important functions are implemented Command.m and DMD.m. Have a look at the [DLP C900 Programmer's Guide](http://www.ti.com/lit/ug/dlpu018b/dlpu018b.pdf)
 for a better reference of the individual commands implemented in this toolbox. 
