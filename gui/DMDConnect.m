@@ -22,7 +22,7 @@ function varargout = DMDConnect(varargin)
 
 % Edit the above text to modify the response to help DMDConnect
 
-% Last Modified by GUIDE v2.5 04-Mar-2016 20:37:11
+% Last Modified by GUIDE v2.5 04-Mar-2016 23:14:41
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -52,36 +52,40 @@ function DMDConnect_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to DMDConnect (see VARARGIN)
 
+% define default values
+handles.Host = '134.100.104.14';
+handles.Port = 8093;
+
 % Choose default command line output for DMDConnect
 handles.output = hObject;
 
 jCalCode = com.mathworks.widgets.SyntaxTextPane;
 codeType = jCalCode.M_MIME_TYPE;  % ='text/m-MATLAB'
 jCalCode.setContentType(codeType)
-str = ['dmdsize = [1920, 1080];\n' ...
-    'xx = [500 1400 500 1400];\n' ...
-    'yy = [200 200 800 800];\n' ...
-    'plot(xx,yy,''kx'',''MarkerSize'',10,''LineWidth'',2);\n' ...
-    'xlim([1 1920]);\n' ...
-    'ylim([1 1080]);\n' ...
-    'set(gca,''XTick'',[]) % Remove the ticks in the x axis\n' ...
-    'set(gca,''YTick'',[]) % Remove the ticks in the y axis\n' ...
-    'text(960,800,''Top'',''FontSize'',16,''HorizontalAlignment'',''center'');\n' ...
-    'text(960,200,''Bottom'',''FontSize'',16,''HorizontalAlignment'',''center'');'];
+str = ['dmdsz = [1080, 1920]; % define dmd size\n' ...
+    '[xx, yy] = meshgrid(-dmdsz(2)/2:dmdsz(2)/2-1,-dmdsz(1)/2:dmdsz(1)/2-1);\n' ...
+    'r = sqrt(xx.^2 + yy.^2); % generate radial vector\n' ...
+    'I = zeros(dmdsz); % define image to be displayed\n' ...
+    'I(r>200) = 1; % set ring\n' ...
+    'imagesc(I); % show preview'];
 str = sprintf(strrep(str,'%','%%'));
 jCalCode.setText(str);
 jScrollPane = com.mathworks.mwswing.MJScrollPane(jCalCode);
-javacomponent(jScrollPane,[310,313,480,130],gcf);
+javacomponent(jScrollPane,[260,220,650,340],gcf);
 jCalCode.setCaretPosition(1);
 
 handles.jCalCode = jCalCode;
+
+set(handles.tgbStop, 'Enable', 'off');
+set(handles.tgbPause, 'Enable', 'off');
+
+handles.d = DMD('debug', 3);
 
 % Update handles structure
 guidata(hObject, handles);
 
 % UIWAIT makes DMDConnect wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
-
 
 
 % --- Outputs from this function are returned to the command line.
@@ -95,14 +99,14 @@ function varargout = DMDConnect_OutputFcn(hObject, eventdata, handles)
 varargout{1} = handles.output;
 
 
-% --- Executes on button press in pbGenCalSc.
-function pbGenCalSc_Callback(hObject, eventdata, handles)
-% hObject    handle to pbGenCalSc (see GCBO)
+% --- Executes on button press in pbGenBMP.
+function pbGenBMP_Callback(hObject, eventdata, handles)
+% hObject    handle to pbGenBMP (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
 % set the source image axis as the current axis
-axes(handles.axSrc);
+axes(handles.axImg);
 % get the command string from the calibration code text window
 cmd = get(handles.jCalCode, 'Text');
 % save command as tmp.m file and mlint
@@ -117,58 +121,13 @@ if msg
 else
     % evaluate the code
     eval(cmd);
-    % copy axis content and save with required resolution
-    f1 = figure;
-    set(f1, 'Visible', 'off');
-    copyobj(handles.axSrc,f1);
     xlim([1 1920]);
     ylim([1 1080]);
     set(gca,'XTick',[]) % Remove the ticks in the x axis!
     set(gca,'YTick',[]) % Remove the ticks in the y axis
     set(gca,'Units','Normalized');
-    set(gca,'Position',[0 0 1 1]) % Make the axes occupy the hole figure
-    t = findall(gca,'type','text');
-    fs = get(t, 'FontSize');
-    for i = 1:size(t)
-        set(t(i), 'FontSize', 1.5*fs{i});
-    end
-    m = findall(gca,'type','line');
-    ms = get(m, 'MarkerSize');
-    set(m, 'MarkerSize', 1.8*ms);
-    r = 150; % pixels per inch
-    set(f1, 'PaperUnits', 'inches', 'PaperPosition', [0 0 1920 1080]/r);
-    print(f1,'-dbmpmono',sprintf('-r%d',r), [tempdir 'tmp.bmp']);
-    close(f1);
-   
-    % load tmp.bmp and assign to handles.calSrc
-    calSrc = imread([tempdir 'tmp.bmp']);
-    delete([tempdir 'tmp.bmp']);
-    handles.calSrc = calSrc;
+    handles.BMP = I;
     guidata(hObject, handles);
-end
-
-% --- Executes on button press in pbLoadCalRes.
-function pbLoadCalRes_Callback(hObject, eventdata, handles)
-% hObject    handle to pbLoadCalRes (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-[img, dir] = uigetfile('*.png', 'Select Calibration Image...');
-imgpath = [dir filesep img];
-if exist(imgpath, 'file')
-    calRes = rgb2gray(imread(imgpath));
-    axes(handles.axRes);
-    if any(size(calRes) == [400 400]) 
-        calRes = padarray(calRes, [56 56]);
-    elseif any(size(calRes) == [200 200])
-        calRes = padarray(calRes, 28);
-    end
-    imagesc(calRes); axis image;
-    xlim([1 512]);
-    ylim([1 512]);
-    set(gca,'XTick',[]) % Remove the ticks in the x axis
-    set(gca,'YTick',[]) % Remove the ticks in the y axis
-    handles.calRes = calRes; % make the image known to the handles struct
-    guidata(hObject, handles); % update handles struct
 end
 
 % --- Executes on button press in pbPerfCal.
@@ -198,19 +157,46 @@ else
     warndlg('You have to specify a calibration image and the resulting picture first');
 end
 
+% --- Executes on button press in pbSelBMP.
+function pbSelBMP_Callback(hObject, eventdata, handles)
+% hObject    handle to pbSelBMP (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+[img, dir] = uigetfile('*.bmp', 'Select Image...');
+imgpath = [dir filesep img];
+if exist(imgpath, 'file')
+    I = rgb2gray(imread(imgpath));
+    axes(handles.axImg);
+    imagesc(I);
+    set(gca,'XTick',[]) % Remove the ticks in the x axis
+    set(gca,'YTick',[]) % Remove the ticks in the y axis
+    handles.BMP = I; % make the image known to the handles struct
+    guidata(hObject, handles); % update handles struct
+end
 
-function edtCalCode_Callback(hObject, eventdata, handles)
-% hObject    handle to edtCalCode (see GCBO)
+
+% --- Executes on button press in tgbSync.
+function tgbSync_Callback(hObject, eventdata, handles)
+% hObject    handle to tgbSync (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of edtCalCode as text
-%        str2double(get(hObject,'String')) returns contents of edtCalCode as a double
+% Hint: get(hObject,'Value') returns toggle state of tgbSync
+
+
+
+function edDelayT_Callback(hObject, eventdata, handles)
+% hObject    handle to edDelayT (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edDelayT as text
+%        str2double(get(hObject,'String')) returns contents of edDelayT as a double
 
 
 % --- Executes during object creation, after setting all properties.
-function edtCalCode_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edtCalCode (see GCBO)
+function edDelayT_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edDelayT (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -220,10 +206,112 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-% --- Executes on button press in pbDispSrc.
-function pbDispSrc_Callback(hObject, eventdata, handles)
-% hObject    handle to pbDispSrc (see GCBO)
+
+
+function edOnT_Callback(hObject, eventdata, handles)
+% hObject    handle to edOnT (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-d = DMD('debug',0);
-d.display(handles.calSrc);
+
+% Hints: get(hObject,'String') returns contents of edOnT as text
+%        str2double(get(hObject,'String')) returns contents of edOnT as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edOnT_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edOnT (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in tgbPlay.
+function tgbPlay_Callback(hObject, eventdata, handles)
+% hObject    handle to tgbPlay (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of tgbPlay
+if get(hObject, 'Value')
+    set(handles.tgbStop, 'Enable', 'on');
+    set(handles.tgbPause, 'Enable', 'on');
+    set(handles.tgbPlay, 'Enable', 'off');
+    set(handles.tgbPause, 'Value', 0);
+    set(handles.tgbStop, 'Value', 0);
+    d = handles.d;
+    d.display(handles.BMP);
+end
+
+% --- Executes on button press in tgbPause.
+function tgbPause_Callback(hObject, eventdata, handles)
+% hObject    handle to tgbPause (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of tgbPause
+if get(hObject, 'Value')
+    set(handles.tgbStop, 'Enable', 'on');
+    set(handles.tgbPause, 'Enable', 'off');
+    set(handles.tgbPlay, 'Enable', 'on');
+    set(handles.tgbPlay, 'Value', 0);
+    d = handles.d;
+    d.patternControl(1);
+end
+
+% --- Executes on button press in tgbStop.
+function tgbStop_Callback(hObject, eventdata, handles)
+% hObject    handle to tgbStop (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of tgbStop
+if get(hObject, 'Value')
+    set(handles.tgbStop, 'Enable', 'off');
+    set(handles.tgbPause, 'Enable', 'off');
+    set(handles.tgbPlay, 'Enable', 'on');
+    set(handles.tgbPlay, 'Value', 0);
+    set(handles.tgbStop, 'Value', 0);
+    set(handles.tgbPause, 'Value', 0);
+    d = handles.d;
+    d.patternControl(0);
+end
+
+% --- Executes on button press in pbFlatF.
+function pbFlatF_Callback(hObject, eventdata, handles)
+% hObject    handle to pbFlatF (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+%Get the Experiment Control status. Might throw an exception.
+function reply = queryECStatus(handles)
+%@return:   The reply from Experiment Control
+%Queries Experiment Control's status. Might throw an exception when
+%Experiment Control is not running, so the use of a
+%try/catch-construct is highly recommended when using this method.
+
+%I dont check for an error here, because giving the error to the
+%caller function enables a better handling for this event.
+
+import java.net.*;
+import java.io.*;
+%Establish connection
+socket = Socket(handles.Host, handles.Port);
+out = socket.getOutputStream;
+in = socket.getInputStream;
+out.write(int8(['GETSTATUS' 10]));
+%Waiting for messages from Server
+while ~(in.available)
+end
+n = in.available;
+%Buffer size = 300 characters
+reply = zeros(1,300);
+for i = 1:n
+    reply(i) = in.read();
+end
+close(socket);

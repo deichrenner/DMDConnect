@@ -211,7 +211,7 @@ classdef DMD < handle
             dmd.receive;
         end
          
-        function definePatter(dmd) % 0x1A34
+        function definePattern(dmd) % 0x1A34
             %DMD.definePattern Defines the LUT entry for a pattern
             %
             %
@@ -314,7 +314,7 @@ classdef DMD < handle
                 end
                 % get size of packet to be transfered
                 numOfBytes = dec2bin(typecast(uint16(size(data,1)),'uint8'),8);
-                data = [numOfBytes; data]; %#ok<AGROW>
+                data = [numOfBytes; dec2bin(hex2dec(data))]; %#ok<AGROW>
                 cmd = Command();
                 cmd.Mode = 'w';                     % set to write mode
                 cmd.Reply = true;                   % we want a reply!
