@@ -158,6 +158,7 @@ classdef DMD < handle
             BMP = prepBMP(I);
             % set the mode to pattern display mode
             dmd.setMode
+            dmd.patternControl(0)
             % define the pattern to be uploaded 
             dmd.definePattern % FIXME: allow for better pattern definition
             % set the number of images to be uploaded to one
@@ -314,7 +315,7 @@ classdef DMD < handle
                 end
                 % get size of packet to be transfered
                 numOfBytes = dec2bin(typecast(uint16(size(data,1)),'uint8'),8);
-                data = [numOfBytes; dec2bin(hex2dec(data))]; %#ok<AGROW>
+                data = [numOfBytes; dec2bin(hex2dec(data),8)]; %#ok<AGROW>
                 cmd = Command();
                 cmd.Mode = 'w';                     % set to write mode
                 cmd.Reply = true;                   % we want a reply!
