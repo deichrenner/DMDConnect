@@ -7,7 +7,7 @@ The most important functions are implemented Command.m and DMD.m. Have a look at
 for a better reference of the individual commands implemented in this toolbox. 
 
 ## Cross Platform Compatibility
-The hidapi implementation should work on Windows, OSX and Linux likewise. However, the communication has only tested under Windows so far. 
+The hidapi implementation should work on Windows, OSX and Linux likewise. However, the communication has only been tested under Windows so far. 
 
 ## Known bugs
 * There is still a better error handling needed.
