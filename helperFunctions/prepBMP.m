@@ -16,7 +16,7 @@ imageHeight = dec2hex(typecast(uint16(size(BMP1,1)),'uint8'),2);
 numOfBytes = dec2hex(typecast(uint32(size(BMP1,1)*size(BMP1,2)*...
     bitDepth),'uint8'));
 backgroundColor = ['00'; '00'; '00'; '00'];
-compression = '01';
+compression = '00';
 
 header = [signature; imageWidth; imageHeight; numOfBytes; ...
     'FF'; 'FF'; 'FF'; 'FF'; 'FF'; 'FF'; 'FF'; 'FF'; backgroundColor; ...
@@ -26,14 +26,16 @@ header = [signature; imageWidth; imageHeight; numOfBytes; ...
 
 BMP1 = BMP1';
 
-% expand to 24bit in hex notation
-BMP24 = zeros(size(BMP1)); 
-BMP24(BMP1(:) == 1) = 800000;
+%  expand to 24bit in 3x8bit decimal notation
+BMP3c = dec2hex([zeros(size(BMP1(:),1),2), BMP1(:)]',2); % add two more colors in order to build the full 24 bit bitmap
 
 data = '';
 
 % compress if whished
 if strcmp(compression, '01')
+    % reshape in order to get 24bit pixel information line by line
+    BMP24 = BMP3c(:);
+    test = reshape(BMP24, 3*size(BMP1,1), size(BMP1,2));
     for i = 1:size(BMP24,1)
         ind = find(diff([BMP24(i,1)-1, BMP24(i,:)]));
         relMat = [dec2hex(diff([ind, numel(BMP24(i,:))+1]),2), num2str(BMP24(i,ind)','%06d')];
@@ -46,8 +48,7 @@ if strcmp(compression, '01')
     data = [header; char(regexp(data, sprintf('\\w{1,%d}', 2), 'match')')];
 else
     % merge header and data
-    data = [header; char(regexp(num2str(BMP24(:)','%d'), ...
-        sprintf('\\w{1,%d}', 2), 'match')')];
+    data = [header; dec2hex(uint8(BMP3c(:)),2);]; % combine header and data
 end
 
 end
