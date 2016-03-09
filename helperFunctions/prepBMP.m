@@ -24,7 +24,7 @@ header = [signature; imageWidth; imageHeight; numOfBytes; ...
     '00'; '00'; '00'; '00'; '00'; '00'; '00'; '00'; '00'; '00'; '00';...
     '00'; '00'; '00'];
 
-BMP1 = BMP1';
+BMP1 = BMP1'*1;
 
 %  expand to 24bit in 3x8bit decimal notation
 BMP3c = dec2hex([zeros(size(BMP1(:),1),2), BMP1(:)]',2); % add two more colors in order to build the full 24 bit bitmap
@@ -48,7 +48,7 @@ if strcmp(compression, '01')
     data = [header; char(regexp(data, sprintf('\\w{1,%d}', 2), 'match')')];
 else
     % merge header and data
-    data = [header; dec2hex(uint8(BMP3c(:)),2);]; % combine header and data
+    data = [header; BMP3c;]; % combine header and data
 end
 
 end
