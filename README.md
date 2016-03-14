@@ -46,6 +46,11 @@ Display some matrix I on the DMD
 `I = [ones(500,500) zeros(500,500)];`
 `d.display(I);`
 
+## Scientific Usage
+If you use this code for scientific purpose, please cite it as [![DOI](https://zenodo.org/badge/20887/deichrenner/DMDConnect.svg)](https://zenodo.org/badge/latestdoi/20887/deichrenner/DMDConnect)
+
+
+
 ## Licensing
 This toolbox is based on the hidapi implementation written by Peter Corke
 in the framework of his robotics toolbox. The original source code can be
