@@ -43,6 +43,7 @@ if strcmp(compression, '02')
         relMat = [formatRep(diff([ind, i*szy+1])), BMP24(ind,:)];
         data = [data sprintf(relMat(:,:)')];
     end
+    
     % put together header, compressed data and end of image padding
     data = [header; char(regexp(data, sprintf('\\w{1,%d}', 2), 'match')'); '00'; '01'; '00'];
 else
