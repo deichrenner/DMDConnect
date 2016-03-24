@@ -158,6 +158,7 @@ classdef DMD < handle
             BMP = prepBMP(I);
             % set the mode to pattern display mode
             dmd.setMode
+            % stop the running pattern
             dmd.patternControl(0)
             % define the pattern to be uploaded 
             dmd.definePattern % FIXME: allow for better pattern definition
@@ -223,7 +224,7 @@ classdef DMD < handle
             bitDepth        = 1;    % desired bit depth (1 corresponds to bitdepth of 1)
             leds            = 1;    % select which color to use
             triggerIn       = 0;    % wait for trigger or cuntinue
-            darkTime        = 500000;    % dark time after exposure in �s
+            darkTime        = 0;    % dark time after exposure in �s
             triggerOut      = 0;    % use trigger2 as output
             patternIdx      = 0;    % image pattern index
             bitPosition     = 0;    % bit position in image pattern
@@ -394,7 +395,7 @@ classdef DMD < handle
                    fprintf(']\n');
                 end
             else
-                rmsg = '';
+                rmsg = zeros(20);
             end
         end
         
@@ -600,5 +601,74 @@ classdef DMD < handle
             disp(['If I don''t work complain to my manufacturer ' ...
                 dmd.conn.handle.getManufacturersString]);
         end 
+        
+        
+        function hwstat = hwstatus(dmd) % 0x1A0A
+            % DMD.hwstatus Returns the hardware status of the DMD
+            % 
+            % hwstatus returns the hardware status of the dmd as described 
+            % in the DLPC900 programmers guide on page 15.
+            % Meaning of the different bits see manual.
+            %
+            % Example::
+            %           d.hwstatus()
+            
+            cmd = Command();
+            cmd.Mode = 'r';         % set to read mode
+            cmd.Reply = true;       % we want a reply!
+            cmd.Sequence = dmd.getCount;     % set the rolling counter of the sequence byte
+            cmd.addCommand({'0x1A', '0x0A'}, '');
+            dmd.send(cmd);
+            
+            % receive the command
+            msg = dmd.receive()';
+            
+            % parse hardware status
+            hwstat = dec2bin(msg(5),8);
+        end 
+        
+        function [stat, statbin] = status(dmd) % 0x1A0C
+            % DMD.status Returns the main status of the DMD
+            % 
+            % status returns the main status of the dmd as described 
+            % in the DLPC900 programmers guide on page 16.
+            % The first output returns a cell array with a human readable 
+            % status message. The second one just returns the bits as
+            % listed in the developer manual. 
+            %
+            % Example::
+            %           d.status()
+            
+            cmd = Command();
+            cmd.Mode = 'r';         % set to read mode
+            cmd.Reply = true;       % we want a reply!
+            cmd.Sequence = dmd.getCount;     % set the rolling counter of the sequence byte
+            cmd.addCommand({'0x1A', '0x0C'}, '');
+            dmd.send(cmd);
+            
+            % receive the command
+            msg = dmd.receive()';
+            
+            % parse hardware status
+            statbin = dec2bin(msg(5),8);
+            statbin = str2num(fliplr(statbin(3:end))');
+            
+            % 0 status
+            stat0 = {'Mirrors not parked | '; ...
+                'Sequencer stopped | '; ...
+                'Video is running | '; ...
+                'External source not locked | '; ...
+                'Port 1 sync not valid | '; ...
+                'Port 2 sync not valid';};
+            % 1 status
+            stat1 = {'Mirrors parked | '; ...
+                'Sequencer running | '; ...
+                'Video is frozen | '; ...
+                'External source locked | '; ...
+                'Port 1 sync valid | '; ...
+                'Port 2 sync valid';};
+            stat = stat0;
+            stat(statbin == 1) = stat1(statbin == 1);
+        end  
     end
 end
