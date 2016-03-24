@@ -22,7 +22,7 @@ function varargout = DMDCalibrate(varargin)
 
 % Edit the above text to modify the response to help DMDCalibrate
 
-% Last Modified by GUIDE v2.5 04-Mar-2016 21:18:58
+% Last Modified by GUIDE v2.5 09-Mar-2016 16:39:42
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -227,3 +227,20 @@ function pbDispSrc_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 d = DMD('debug',0);
 d.display(handles.calSrc);
+handles.d = d;
+guidata(hObject, handles); % update handles struct
+
+
+
+% --- Executes when user attempts to close figure1.
+function figure1_CloseRequestFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+handles.d.delete;
+
+% Hint: delete(hObject) closes the figure
+delete(hObject);
+
+

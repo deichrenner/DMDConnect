@@ -27,11 +27,11 @@ function varargout = DMDConnect(varargin)
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @DMDConnect_OpeningFcn, ...
-                   'gui_OutputFcn',  @DMDConnect_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
+    'gui_Singleton',  gui_Singleton, ...
+    'gui_OpeningFcn', @DMDConnect_OpeningFcn, ...
+    'gui_OutputFcn',  @DMDConnect_OutputFcn, ...
+    'gui_LayoutFcn',  [], ...
+    'gui_Callback',   []);
 if nargin && ischar(varargin{1})
     gui_State.gui_Callback = str2func(varargin{1});
 end
@@ -59,6 +59,7 @@ handles.Port = 8093;
 % Choose default command line output for DMDConnect
 handles.output = hObject;
 
+% insert coding window with example code
 jCalCode = com.mathworks.widgets.SyntaxTextPane;
 codeType = jCalCode.M_MIME_TYPE;  % ='text/m-MATLAB'
 jCalCode.setContentType(codeType)
@@ -71,15 +72,26 @@ str = ['dmdsz = [1080, 1920]; % define dmd size\n' ...
 str = sprintf(strrep(str,'%','%%'));
 jCalCode.setText(str);
 jScrollPane = com.mathworks.mwswing.MJScrollPane(jCalCode);
-javacomponent(jScrollPane,[260,220,650,340],gcf);
+javacomponent(jScrollPane,[185,230,650,450],gcf);
 jCalCode.setCaretPosition(1);
-
 handles.jCalCode = jCalCode;
 
+% do not show any java related warning
+warning('off', 'MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
+
+% initialize the pause/stop buttons
 set(handles.tgbStop, 'Enable', 'off');
 set(handles.tgbPause, 'Enable', 'off');
 
-handles.d = DMD('debug', 3);
+% connect to the dmd
+d = DMD('debug', 0);
+% put the dmd to sleep
+d.sleep;
+% make dmd object known to the handles struct
+handles.d = d;
+
+% mark the sync flag as not being in sync
+handles.inSync = 0;
 
 % Update handles structure
 guidata(hObject, handles);
@@ -87,9 +99,19 @@ guidata(hObject, handles);
 % UIWAIT makes DMDConnect wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
 
+% --- This function sets the actual status of the DMD in the status bar
+function setDMDstatus(handles)
+% status     cell strin containing the dmd status information
+% handles    structure with handles and user data (see GUIDATA)
+% insert status bar in the bottom region of the window
+
+% read status and show
+status = handles.d.status;
+statusbar(['Status: ' status{:}]); %#ok<*MSNU>
+
 
 % --- Outputs from this function are returned to the command line.
-function varargout = DMDConnect_OutputFcn(hObject, eventdata, handles) 
+function varargout = DMDConnect_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -97,6 +119,17 @@ function varargout = DMDConnect_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.output;
+
+% make the statusbar visible and show status of the dmd
+d = handles.d;
+status = d.status;
+old_pos = get(gcf,'Position');
+set(gcf,'Position',1.05.*old_pos);
+set(gcf,'Position',old_pos);
+stat = statusbar(['Status: ' status{:}]); %#ok<*MSNU>
+set(stat.CornerGrip, 'visible', false); %#ok<*MSNU>
+handles.stat = stat;
+guidata(hObject, handles);
 
 
 % --- Executes on button press in pbGenBMP.
@@ -127,50 +160,28 @@ else
     set(gca,'YTick',[]) % Remove the ticks in the y axis
     set(gca,'Units','Normalized');
     handles.BMP = I;
+    handles.isUploaded = 0;
     guidata(hObject, handles);
 end
 
-% --- Executes on button press in pbPerfCal.
-function pbPerfCal_Callback(hObject, eventdata, handles)
-% hObject    handle to pbPerfCal (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-if isfield(handles, 'calRes') && isfield(handles, 'calSrc')
-    moving = double(handles.calRes); % calibration image
-    fixed = double(handles.calSrc); % reference image
-    
-    % start referencing tool
-    [movingPoints,fixedPoints] = cpselect(moving/max(moving(:)), ...
-        fixed-min(fixed(:)), 'Wait', true);
-    tform = fitgeotrans(movingPoints, fixedPoints, 'NonreflectiveSimilarity');
-    save('tform.mat', 'tform');
-    % calculate projection of calibration image to reference image and display
-    cal = imwarp(moving,tform,'OutputView',imref2d(size(fixed)));
-    axes(handles.axCal);
-    imagesc(cal);
-    set(gca,'XTick',[]) % Remove the ticks in the x axis
-    set(gca,'YTick',[]) % Remove the ticks in the y axis
-    handles.Cal = tform;
-    guidata(hObject, handles); % update handles struct
-else
-    warndlg('You have to specify a calibration image and the resulting picture first');
-end
-
 % --- Executes on button press in pbSelBMP.
-function pbSelBMP_Callback(hObject, eventdata, handles)
+function pbSelBMP_Callback(hObject, ~, handles)
 % hObject    handle to pbSelBMP (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 [img, dir] = uigetfile('*.bmp', 'Select Image...');
 imgpath = [dir filesep img];
 if exist(imgpath, 'file')
-    I = rgb2gray(imread(imgpath));
+    I = imread(imgpath);
+    if size(I,3) > 1
+        I = rgb2gray(I);
+    end
     axes(handles.axImg);
     imagesc(I);
     set(gca,'XTick',[]) % Remove the ticks in the x axis
     set(gca,'YTick',[]) % Remove the ticks in the y axis
     handles.BMP = I; % make the image known to the handles struct
+    handles.isUploaded = 0;
     guidata(hObject, handles); % update handles struct
 end
 
@@ -182,7 +193,69 @@ function tgbSync_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of tgbSync
+if get(hObject, 'Value')
+    % check, if cycle is running
+    nextc = cSync(handles);
+    
+    % if not, show warning and set sync toggle button to off
+    if nextc == -100
+        warndlg('Cycle is not running. Start cycle and retry!');
+        set(hObject, 'Value', 'Off')
+    else
+        while get(hObject, 'Value')
+            % if it is running, pause the dmd
+            tgbPause_Callback(hObject, eventdata, handles)
+            % check the status, wait and play the
+            % dmd sequence
+            if ~handles.inSync
+                [nextc, len] = cSync(handles);
+                statusbar('Wait for cycle to end...');
+                if floor(nextc) > 1
+                    for i = 1:floor(nextc-1.5)
+                        set(handles.stat.ProgressBar, 'Visible', true, 'Minimum',0, ...
+                            'Maximum', len, 'Value', len-nextc+i);
+                        pause(1);
+                    end
+                end
+                handles.inSync = 1;
+                guidata(hObject, handles); % update handles struct
+            end
+            [nextc, len] = cSync(handles);
+            tstart = timer('StartDelay',nextc+str2double(get(handles.edDelayT, 'String')) ...
+                ,'ExecutionMode', 'singleShot');
+            tstart.TimerFcn = {@tgbPlay_Callback, handles};
+            tstop = timer('StartDelay',nextc+str2double(get(handles.edDelayT, 'String'))+ ...
+                str2double(get(handles.edOnT, 'String')), ...
+                'ExecutionMode', 'singleShot');
+            tstop.TimerFcn = {@tgbPause_Callback, handles};
+            
+            tprog = timer('StartDelay',nextc,'ExecutionMode', 'fixedRate', ...
+                'TasksToExecute', floor(len-1), 'Period', 1);
+            tprog.TimerFcn = {@cProgressBar_Callback, handles};
+            
+            start(tstart);
+            start(tstop);
+            start(tprog);
+            wait(tstop);
+        end
+        wait(tprog);
+        handles.inSync = 0;
+        guidata(hObject, handles); % update handles struct
+        set(handles.stat.ProgressBar, 'Visible', false);
+    end
+end
 
+
+function cProgressBar_Callback(hObject, eventdata, handles)
+% hObject    handle to edDelayT (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% nextc      seconds until next cycle start
+% len        cycle length in total in seconds
+
+[nc, l] = cSync(handles);
+set(handles.stat.ProgressBar, 'Visible', true, 'Minimum',0, ...
+    'Maximum', l, 'Value', l - nc);
 
 
 function edDelayT_Callback(hObject, eventdata, handles)
@@ -237,14 +310,31 @@ function tgbPlay_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of tgbPlay
-if get(hObject, 'Value')
+if isfield(handles, 'BMP')
     set(handles.tgbStop, 'Enable', 'on');
     set(handles.tgbPause, 'Enable', 'on');
     set(handles.tgbPlay, 'Enable', 'off');
-    set(handles.tgbPause, 'Value', 0);
-    set(handles.tgbStop, 'Value', 0);
     d = handles.d;
-    d.display(handles.BMP);
+    stat = handles.stat;
+    if d.sleeping
+        d.wakeup
+        set(stat.ProgressBar, 'Visible', true,  ...
+            'Minimum',0, 'Maximum',100, 'Value', 20);
+        statusbar('Woke up DMD...');
+    end
+    if handles.isUploaded
+        d.patternControl(2);
+    else
+        statusbar('Generate BMP and upload...');
+        d.display(handles.BMP);
+        set(stat.ProgressBar, 'Value', 60);
+        statusbar('Uploaded...');
+        handles.isUploaded = 1;
+        guidata(hObject, handles);
+    end
+    setDMDstatus(handles);
+else
+    warndlg('You have to specify an image first!');
 end
 
 % --- Executes on button press in tgbPause.
@@ -254,14 +344,13 @@ function tgbPause_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of tgbPause
-if get(hObject, 'Value')
-    set(handles.tgbStop, 'Enable', 'on');
-    set(handles.tgbPause, 'Enable', 'off');
-    set(handles.tgbPlay, 'Enable', 'on');
-    set(handles.tgbPlay, 'Value', 0);
-    d = handles.d;
-    d.patternControl(1);
-end
+set(handles.tgbStop, 'Enable', 'on');
+set(handles.tgbPause, 'Enable', 'off');
+set(handles.tgbPlay, 'Enable', 'on');
+d = handles.d;
+d.patternControl(1);
+setDMDstatus(handles);
+
 
 % --- Executes on button press in tgbStop.
 function tgbStop_Callback(hObject, eventdata, handles)
@@ -270,16 +359,16 @@ function tgbStop_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of tgbStop
-if get(hObject, 'Value')
-    set(handles.tgbStop, 'Enable', 'off');
-    set(handles.tgbPause, 'Enable', 'off');
-    set(handles.tgbPlay, 'Enable', 'on');
-    set(handles.tgbPlay, 'Value', 0);
-    set(handles.tgbStop, 'Value', 0);
-    set(handles.tgbPause, 'Value', 0);
-    d = handles.d;
-    d.patternControl(0);
-end
+set(handles.tgbStop, 'Enable', 'off');
+set(handles.tgbPause, 'Enable', 'off');
+set(handles.tgbPlay, 'Enable', 'on');
+d = handles.d;
+d.patternControl(0);
+d.sleep;
+handles.isUploaded = 0;
+setDMDstatus(handles);
+guidata(hObject, handles); % update handles struct
+
 
 % --- Executes on button press in pbFlatF.
 function pbFlatF_Callback(hObject, eventdata, handles)
@@ -287,31 +376,3 @@ function pbFlatF_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-
-%Get the Experiment Control status. Might throw an exception.
-function reply = queryECStatus(handles)
-%@return:   The reply from Experiment Control
-%Queries Experiment Control's status. Might throw an exception when
-%Experiment Control is not running, so the use of a
-%try/catch-construct is highly recommended when using this method.
-
-%I dont check for an error here, because giving the error to the
-%caller function enables a better handling for this event.
-
-import java.net.*;
-import java.io.*;
-%Establish connection
-socket = Socket(handles.Host, handles.Port);
-out = socket.getOutputStream;
-in = socket.getInputStream;
-out.write(int8(['GETSTATUS' 10]));
-%Waiting for messages from Server
-while ~(in.available)
-end
-n = in.available;
-%Buffer size = 300 characters
-reply = zeros(1,300);
-for i = 1:n
-    reply(i) = in.read();
-end
-close(socket);
