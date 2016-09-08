@@ -47,6 +47,8 @@ classdef DMD < handle
         isidle = 0;
         % is a pattern running?
         isrunning = 1;
+        % display mode 
+        displayMode = 3;
     end
 
     methods
@@ -81,7 +83,6 @@ classdef DMD < handle
                  dmd.conn = usbDMDIO(dmd.debug);
              elseif dmd.debug == 3
                  disp('Dummy mode. Didn''t connect to DMD!');
-                 
              end
              connect = 1;
              
@@ -154,22 +155,58 @@ classdef DMD < handle
             % Example::
             %           d.display(ones(1920,1080))
             
-            % prepare matrix for upload
-            BMP = prepBMP(I);
-            % set the mode to pattern display mode
-            dmd.setMode
-            % stop the running pattern
-            dmd.patternControl(0)
-            % define the pattern to be uploaded 
-            dmd.definePattern % FIXME: allow for better pattern definition
-            % set the number of images to be uploaded to one
-            dmd.numOfImages
-            % initialize the pattern upload
-            dmd.initPatternLoad(0,size(BMP,1));
-            % do the upload
-            dmd.uploadPattern(BMP)
-            % set the dmd state to play
-            dmd.patternControl(2)
+            
+            % check which display mode the dmd is in
+            if dmd.displayMode == 0
+                disp('Displaying images via normal video mode is not implemented yet');
+            elseif dmd.displayMode == 1
+                disp('Displaying images via pre-stored pattern mode is not implemented yet');
+            elseif dmd.displayMode == 2
+                % check if source is locked
+                stat = dmd.status;
+                if stat(4)
+                    % show full screen image on dmd
+                    jimg = im2java(uint8(255*I)); % init java image
+                    frame = javax.swing.JFrame; % get a java window frame
+                    frame.setUndecorated(true); % remove all decoration
+                    icon = javax.swing.ImageIcon(jimg); % set frame content
+                    label = javax.swing.JLabel(icon);
+                    frame.getContentPane.add(label);
+                    frame.pack;
+                    % Get the screen size from the root object
+                    screenSize = get(0,'MonitorPositions');
+                    % find screen matching the dmds resolution
+                    ind = find(screenSize(:,3) == 1920 && screenSize(:,4) == 1080);
+                    frame.setSize(1920,1080); % set frame size to native dmd resolution
+                    frame.setLocation(screenSize(ind,1),screenSize(ind,2)); % set location of frame to dmd
+                    frame.show; % show full screen
+                else
+                    disp('Video source not locked');
+                end
+                
+            elseif dmd.displayMode == 3
+                % pattern on the fly mode -> use usb connection to transfer
+                % images
+                if dmd.d
+                    disp('Display image in pattern on-the-fly mode');
+                end
+                % prepare matrix for upload
+                BMP = prepBMP(I);
+                % set the mode to pattern display mode
+                dmd.setMode
+                % stop the running pattern
+                dmd.patternControl(0)
+                % define the pattern to be uploaded
+                dmd.definePattern % FIXME: allow for better pattern definition
+                % set the number of images to be uploaded to one
+                dmd.numOfImages
+                % initialize the pattern upload
+                dmd.initPatternLoad(0,size(BMP,1));
+                % do the upload
+                dmd.uploadPattern(BMP)
+                % set the dmd state to play
+                dmd.patternControl(2)
+            end
         end
         
         function setMode(dmd,m) % 0x1A1B
@@ -202,6 +239,9 @@ classdef DMD < handle
                 disp('setMode: Only modes [0-3] are allowed, use default mode 3.');
                 m = 3;
             end
+            
+            % make new display mode known the dmd object
+            dmd.displayMode = m;
 
             cmd = Command();
             cmd.Mode = 'w';                     % set to write mode
@@ -211,6 +251,21 @@ classdef DMD < handle
             cmd.addCommand({'0x1A', '0x1B'}, data);   % set the usb command
             dmd.send(cmd)
             dmd.receive;
+            
+            % set additional parameters depending on the chosen display
+            % mode
+            if dmd.displayMode == 2
+                % set it6535 receiver to display port &0x1A01
+                cmd = Command();
+                cmd.Mode = 'w';                     % set to write mode
+                cmd.Reply = true;                  % we want no reply
+                cmd.Sequence = dmd.getCount;        % set the rolling counter of the sequence byte
+                data = dec2bin(2, 8);                  % usb payload
+                cmd.addCommand({'0x1A', '0x01'}, data);   % set the usb command
+                dmd.send(cmd)
+                dmd.receive;
+                
+            end
         end
          
         function definePattern(dmd) % 0x1A34
