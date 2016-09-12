@@ -1,5 +1,5 @@
 % DMD interface to the TI 6500 EVM DLP evaluation module
-% 
+%
 % Methods:
 % DMD               Constructor, establishes communications
 % delete            Destructor, closes connection
@@ -26,7 +26,7 @@
 % This toolbox is based on the hidapi implementation written by Peter Corke
 % in the framework of his robotics toolbox. The original source code can be
 % found on http://www.petercorke.com/Robotics_Toolbox.html.
-% 
+%
 % Author: Klaus Hueck (e-mail: khueck (at) physik (dot) uni-hamburg (dot) de)
 % Version: 0.0.1alpha
 % Changes tracker:  28.01.2016  - First version
@@ -47,49 +47,49 @@ classdef DMD < handle
         isidle = 0;
         % is a pattern running?
         isrunning = 1;
-        % display mode 
+        % display mode
         displayMode = 3;
     end
-
+    
     methods
-        function dmd = DMD(varargin) 
-             % DMD.DMD Create a DMD object
-             %
-             % d = DMD(OPTIONS) is an object that represents a connection
-             % interface to a TI 6500 EVM DMD module.
-             %
-             % Options:
-             %  'debug',D       Debug level, show communications packet
-             
-             % make all helper functions known to DMD()
-             libDir = strsplit(mfilename('fullpath'), filesep);
-             % fix fullfile file separation for linux systems
-             firstsep = '';
-             if (isunix == 1)
-                 firstsep = '/';
-             end
-             addpath(fullfile(firstsep, libDir{1:end-1}, 'helperFunctions'));
-             
-             % init the properties
-             opt.debug = 0;
-             % read in the options
-             opt = tb_optparse(opt, varargin);
-             
-             % connect via usb
-             dmd.debug = opt.debug;
-             if dmd.debug <= 1
+        function dmd = DMD(varargin)
+            % DMD.DMD Create a DMD object
+            %
+            % d = DMD(OPTIONS) is an object that represents a connection
+            % interface to a TI 6500 EVM DMD module.
+            %
+            % Options:
+            %  'debug',D       Debug level, show communications packet
+            
+            % make all helper functions known to DMD()
+            libDir = strsplit(mfilename('fullpath'), filesep);
+            % fix fullfile file separation for linux systems
+            firstsep = '';
+            if (isunix == 1)
+                firstsep = '/';
+            end
+            addpath(fullfile(firstsep, libDir{1:end-1}, 'helperFunctions'));
+            
+            % init the properties
+            opt.debug = 0;
+            % read in the options
+            opt = tb_optparse(opt, varargin);
+            
+            % connect via usb
+            dmd.debug = opt.debug;
+            if dmd.debug <= 1
                 dmd.conn = usbDMDIO;
-             elseif dmd.debug == 2
-                 dmd.conn = usbDMDIO(dmd.debug);
-             elseif dmd.debug == 3
-                 disp('Dummy mode. Didn''t connect to DMD!');
-             end
-             connect = 1;
-             
-             % error
-             if(~connect)
-                 fprintf('Add error handling here!\n');
-             end
+            elseif dmd.debug == 2
+                dmd.conn = usbDMDIO(dmd.debug);
+            elseif dmd.debug == 3
+                disp('Dummy mode. Didn''t connect to DMD!');
+            end
+            connect = 1;
+            
+            % error
+            if(~connect)
+                fprintf('Add error handling here!\n');
+            end
         end
         
         function delete(dmd)
@@ -103,7 +103,7 @@ classdef DMD < handle
             end
             
             dmd.conn.close();
-        end  
+        end
         
         function send(dmd, cmd)
             % DMD.send Send data to the dmd
@@ -134,18 +134,18 @@ classdef DMD < handle
             end
             
             if dmd.debug > 0
-               fprintf('sent:    [ ');
-               for ii=1:length(cmd.msg)
-                   fprintf('%s ',dec2hex(cmd.msg(ii)))
-               end
-               fprintf(']\n');
+                fprintf('sent:    [ ');
+                for ii=1:length(cmd.msg)
+                    fprintf('%s ',dec2hex(cmd.msg(ii)))
+                end
+                fprintf(']\n');
             end
         end
         
         function display(dmd,I)
             %DMD.display supermethod to prepare, upload and show a matlab
             %matrix
-            % 
+            %
             % display prepares the matrix I for upload, uploads it and
             % finally displays it on the dmd
             %
@@ -158,12 +158,9 @@ classdef DMD < handle
             
             % check which display mode the dmd is in
             if dmd.displayMode == 0
-                disp('Displaying images via normal video mode is not implemented yet');
-            elseif dmd.displayMode == 1
-                disp('Displaying images via pre-stored pattern mode is not implemented yet');
-            elseif dmd.displayMode == 2
+                
                 % check if source is locked
-                stat = dmd.status;
+                [~, stat] = dmd.status;
                 if stat(4)
                     % show full screen image on dmd
                     jimg = im2java(uint8(255*I)); % init java image
@@ -176,13 +173,17 @@ classdef DMD < handle
                     % Get the screen size from the root object
                     screenSize = get(0,'MonitorPositions');
                     % find screen matching the dmds resolution
-                    ind = find(screenSize(:,3) == 1920 && screenSize(:,4) == 1080);
                     frame.setSize(1920,1080); % set frame size to native dmd resolution
-                    frame.setLocation(screenSize(ind,1),screenSize(ind,2)); % set location of frame to dmd
+                    frame.setLocation(screenSize(2,1)+screenSize(2,3),screenSize(1,2)); % set location of frame to dmd
                     frame.show; % show full screen
                 else
                     disp('Video source not locked');
                 end
+            elseif dmd.displayMode == 1
+                disp('Displaying images via pre-stored pattern mode is not implemented yet');
+            elseif dmd.displayMode == 2
+                
+                disp('Displaying images via video pattern mode is not implemented yet');
                 
             elseif dmd.displayMode == 3
                 % pattern on the fly mode -> use usb connection to transfer
@@ -211,7 +212,7 @@ classdef DMD < handle
         
         function setMode(dmd,m) % 0x1A1B
             %DMD.setMode Sets DMD to the selected mode
-            % 
+            %
             % setMode puts the dmd to the selected mode. Possible modes m
             % are:
             %   0 = Normal video mode
@@ -230,19 +231,19 @@ classdef DMD < handle
                 if dmd.debug
                     disp('setMode: Use default mode 3');
                 end
-            elseif nargin > 2 
+            elseif nargin > 2
                 disp(['setMode: Please only specify the dmd to work on and ' ...
                     'the required operation mode']);
             end
             
-            if any(m > 3) || any(m < 0) 
+            if any(m > 3) || any(m < 0)
                 disp('setMode: Only modes [0-3] are allowed, use default mode 3.');
                 m = 3;
             end
             
             % make new display mode known the dmd object
             dmd.displayMode = m;
-
+            
             cmd = Command();
             cmd.Mode = 'w';                     % set to write mode
             cmd.Reply = true;                  % we want no reply
@@ -254,7 +255,7 @@ classdef DMD < handle
             
             % set additional parameters depending on the chosen display
             % mode
-            if dmd.displayMode == 2
+            if dmd.displayMode == 0 || dmd.displayMode == 2
                 % set it6535 receiver to display port &0x1A01
                 cmd = Command();
                 cmd.Mode = 'w';                     % set to write mode
@@ -267,7 +268,7 @@ classdef DMD < handle
                 
             end
         end
-         
+        
         function definePattern(dmd) % 0x1A34
             %DMD.definePattern Defines the LUT entry for a pattern
             %
@@ -353,12 +354,12 @@ classdef DMD < handle
             %
             
             % The C900 input buffer is 512 byte large. The HID buffer is 64
-            % byte large and the command header of the first transmission 
-            % of each 512 byte chunk is 8 byte long. 
+            % byte large and the command header of the first transmission
+            % of each 512 byte chunk is 8 byte long.
             % Thus we need to split the data in chunks of 1x 55 byte plus
             % nx 64 byte until all 512 bytes of the input buffer are
             % filled. Then, we need to issue a new transmission with the
-            % full 8 byte header. 
+            % full 8 byte header.
             chunkSize = 54;
             numOfTransfers = ceil(size(BMP,1)/chunkSize);
             textprogressbar('Upload Image: ');
@@ -389,7 +390,7 @@ classdef DMD < handle
         
         function patternControl(dmd, c) % 0x1A24
             %DMD.patternControl Starts, stops or pauses the actual pattern
-            % 
+            %
             % patternControl starts, stops or pauses the actual pattern. A
             % stop will cause the pattern to stop. The next start command
             % will restart the sequence from the beginning. A pause command
@@ -429,7 +430,7 @@ classdef DMD < handle
             dmd.count = dmd.count + 1;
             dmd.count(dmd.count > 255) = 1;
         end
-       
+        
         function rmsg = receive(dmd)
             % DMD.receive Receive data from the dmd
             %
@@ -443,11 +444,11 @@ classdef DMD < handle
             if ~(dmd.debug == 3)
                 rmsg = dmd.conn.read();
                 if dmd.debug > 0
-                   fprintf('received:    [ ');
-                   for ii=1:length(rmsg)
-                       fprintf('%d ',rmsg(ii))
-                   end
-                   fprintf(']\n');
+                    fprintf('received:    [ ');
+                    for ii=1:length(rmsg)
+                        fprintf('%d ',rmsg(ii))
+                    end
+                    fprintf(']\n');
                 end
             else
                 rmsg = zeros(20);
@@ -507,7 +508,7 @@ classdef DMD < handle
         
         function idle(dmd)
             %DMD.idle Puts the DMD in idle mode
-            % 
+            %
             % idle puts the dmd to idle mode.
             %
             % Example::
@@ -527,12 +528,12 @@ classdef DMD < handle
                 if dmd.debug
                     disp('DMD is already in idle mode!');
                 end
-            end            
+            end
         end
         
         function active(dmd)
             %DMD.active Puts the DMD from idle back to active mode
-            % 
+            %
             % active puts the dmd back to active mode.
             %
             % Example::
@@ -552,12 +553,12 @@ classdef DMD < handle
                 if dmd.debug
                     disp('DMD was already active!');
                 end
-            end  
+            end
         end
         
         function sleep(dmd)
             % DMD.sleep Put DMD to sleep
-            % 
+            %
             % sleep puts the dmd to stand by mode.
             %
             % Example::
@@ -581,7 +582,7 @@ classdef DMD < handle
         
         function reset(dmd)
             % DMD.reset Do a software reset
-            % 
+            %
             % reset does a software reset on the dmd.
             %
             % Example::
@@ -598,7 +599,7 @@ classdef DMD < handle
         
         function wakeup(dmd)
             % DMD.wakeup Wakeup DMD after sleep
-            % 
+            %
             % wakeup puts the dmd back to normal operation mode.
             %
             % Example::
@@ -611,7 +612,7 @@ classdef DMD < handle
                 cmd.Sequence = dmd.getCount;        % set the rolling counter of the sequence byte
                 data = '00000000';                  % usb payload
                 cmd.addCommand({'0x02', '0x00'}, data);   % set the usb command
-                dmd.send(cmd)      
+                dmd.send(cmd)
                 dmd.sleeping = 0;
             else
                 if dmd.debug
@@ -622,7 +623,7 @@ classdef DMD < handle
         
         function fwVersion(dmd)
             % DMD.fwversion Return firmware version
-            % 
+            %
             % fwversion returns firmware version.
             %
             % Example::
@@ -655,13 +656,13 @@ classdef DMD < handle
                 num2str(APIminor) '.' num2str(APIpatch)]);
             disp(['If I don''t work complain to my manufacturer ' ...
                 dmd.conn.handle.getManufacturersString]);
-        end 
+        end
         
         
         function hwstat = hwstatus(dmd) % 0x1A0A
             % DMD.hwstatus Returns the hardware status of the DMD
-            % 
-            % hwstatus returns the hardware status of the dmd as described 
+            %
+            % hwstatus returns the hardware status of the dmd as described
             % in the DLPC900 programmers guide on page 15.
             % Meaning of the different bits see manual.
             %
@@ -680,16 +681,16 @@ classdef DMD < handle
             
             % parse hardware status
             hwstat = dec2bin(msg(5),8);
-        end 
+        end
         
         function [stat, statbin] = status(dmd) % 0x1A0C
             % DMD.status Returns the main status of the DMD
-            % 
-            % status returns the main status of the dmd as described 
+            %
+            % status returns the main status of the dmd as described
             % in the DLPC900 programmers guide on page 16.
-            % The first output returns a cell array with a human readable 
+            % The first output returns a cell array with a human readable
             % status message. The second one just returns the bits as
-            % listed in the developer manual. 
+            % listed in the developer manual.
             %
             % Example::
             %           d.status()
@@ -724,6 +725,6 @@ classdef DMD < handle
                 'Port 2 sync valid';};
             stat = stat0;
             stat(statbin == 1) = stat1(statbin == 1);
-        end  
+        end
     end
 end
