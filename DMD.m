@@ -174,8 +174,15 @@ classdef DMD < handle
                     screenSize = get(0,'MonitorPositions');
                     % find screen matching the dmds resolution
                     frame.setSize(1920,1080); % set frame size to native dmd resolution
-                    frame.setLocation(screenSize(2,1)+screenSize(2,3),screenSize(1,2)); % set location of frame to dmd
-                    frame.show; % show full screen
+                    ind = find(screenSize(:,3) == 1920 & screenSize(:,4) == 1080);
+                    if ~isempty(ind)
+                        frame.setLocation(screenSize(ind,1),screenSize(ind,2)); % set location of frame to dmd
+                        frame.show; % show full screen
+                    else
+                        warndlg(['There is no screen with the native DMD resolution available. ' ...
+                            'Please connect the DMD, select the display port as input, wait for the screen to flicker, ' ...
+                            'restart Matlab and try again. Sorry for the inconvenience!']);
+                    end
                 else
                     disp('Video source not locked');
                 end
@@ -188,7 +195,7 @@ classdef DMD < handle
             elseif dmd.displayMode == 3
                 % pattern on the fly mode -> use usb connection to transfer
                 % images
-                if dmd.d
+                if dmd.debug
                     disp('Display image in pattern on-the-fly mode');
                 end
                 % prepare matrix for upload
