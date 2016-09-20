@@ -179,6 +179,7 @@ classdef DMD < handle
                 [~, stat] = dmd.status;
                 if stat(4)
                     % show full screen image on dmd
+                    screenSize = get(0, 'MonitorPosition');
                     ind = find(screenSize(:,3) == 1920 & screenSize(:,4) == 1080);
                     if ~isempty(ind)
                         fullscreen(I,ind);
