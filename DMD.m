@@ -102,6 +102,19 @@ classdef DMD < handle
                 dmd.wakeup;
             end
             
+            % check if display mode is normal video mode. if so, shut down
+            % the it6535 receiver
+            if dmd.displayMode == 0                
+                % shut down it6535 receiver &0x1A01
+                cmd = Command();
+                cmd.Mode = 'w';                     % set to write mode
+                cmd.Reply = true;                  % we want no reply
+                cmd.Sequence = dmd.getCount;        % set the rolling counter of the sequence byte
+                data = dec2bin(0, 8);                  % usb payload
+                cmd.addCommand({'0x1A', '0x01'}, data);   % set the usb command
+                dmd.send(cmd)
+                dmd.receive;
+            end
             dmd.conn.close();
         end
         
