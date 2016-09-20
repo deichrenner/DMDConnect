@@ -49,6 +49,9 @@ classdef DMD < handle
         isrunning = 1;
         % display mode
         displayMode = 3;
+        % contains the java frame for displaying images in fullscreen on
+        % the dmd
+        frame = '';
     end
     
     methods
@@ -175,22 +178,27 @@ classdef DMD < handle
                 % check if source is locked
                 [~, stat] = dmd.status;
                 if stat(4)
+                    if ~isempty(dmd.frame)
+                        % if frame is shown, hide it and initialize with a
+                        % new image
+                        dmd.frame.hide;
+                    end
                     % show full screen image on dmd
                     jimg = im2java(uint8(255*I)); % init java image
-                    frame = javax.swing.JFrame; % get a java window frame
-                    frame.setUndecorated(true); % remove all decoration
+                    dmd.frame = javax.swing.JFrame; % get a java window frame
+                    dmd.frame.setUndecorated(true); % remove all decoration
                     icon = javax.swing.ImageIcon(jimg); % set frame content
                     label = javax.swing.JLabel(icon);
-                    frame.getContentPane.add(label);
-                    frame.pack;
+                    dmd.frame.getContentPane.add(label);
+                    dmd.frame.pack;
                     % Get the screen size from the root object
                     screenSize = get(0,'MonitorPositions');
                     % find screen matching the dmds resolution
-                    frame.setSize(1920,1080); % set frame size to native dmd resolution
+                    dmd.frame.setSize(1920,1080); % set frame size to native dmd resolution
                     ind = find(screenSize(:,3) == 1920 & screenSize(:,4) == 1080);
                     if ~isempty(ind)
-                        frame.setLocation(screenSize(ind,1),screenSize(ind,2)); % set location of frame to dmd
-                        frame.show; % show full screen
+                        dmd.frame.setLocation(screenSize(ind,1),screenSize(ind,2)); % set location of frame to dmd
+                        dmd.frame.show; % show full screen
                     else
                         warndlg(['There is no screen with the native DMD resolution available. ' ...
                             'Please connect the DMD, select the display port as input, wait for the screen to flicker, ' ...
