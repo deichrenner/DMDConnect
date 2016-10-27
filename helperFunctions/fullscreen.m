@@ -53,13 +53,11 @@ end
     
 if ~isequal(class(frame_java), 'javax.swing.JFrame')
     frame_java = javax.swing.JFrame(gds(device_number).getDefaultConfiguration());
-    bounds = frame_java.getBounds(); 
     frame_java.setUndecorated(true);
     icon_java = javax.swing.ImageIcon(buff_image); 
     label = javax.swing.JLabel(icon_java); 
     frame_java.getContentPane.add(label);
-    gds(device_number).setFullScreenWindow(frame_java);
-    frame_java.setLocation( bounds.x, bounds.y ); 
+    frame_java.setExtendedState(frame_java.MAXIMIZED_BOTH);
 else
     icon_java.setImage(buff_image);
 end
