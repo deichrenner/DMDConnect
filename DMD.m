@@ -179,14 +179,12 @@ classdef DMD < handle
                 [~, stat] = dmd.status;
                 if stat(4)
                     % show full screen image on dmd
-                    screenSize = get(0, 'MonitorPosition');
-                    ind = find(screenSize(:,3) == 1920 & screenSize(:,4) == 1080);
+                    ind = findDMD();
                     if ~isempty(ind)
                         fullscreen(I,ind);
                     else
                         warndlg(['There is no screen with the native DMD resolution available. ' ...
-                            'Please connect the DMD, select the display port as input, wait for the screen to flicker, ' ...
-                            'restart Matlab and try again. Sorry for the inconvenience!']);
+                            'Please connect the DMD, and select the proper display mode.']);
                     end
                 else
                     disp('Video source not locked');
